@@ -258,6 +258,28 @@ app.get('/payment', verifyJwt, async (req, res) => {
 });
 
 
+// available seats update api
+app.patch('/classes/update/:id', async (req, res) => {
+
+  try {
+    const id = req.params.id;
+    const body = req.body;
+    // console.log(body.available_seats);
+    const filter = { _id: new ObjectId(id) }
+    const updateDoc = {
+      $set: {
+        available_seats: body.available_seats - 1
+      }
+    }
+    const result = await classCollection.updateOne(filter, updateDoc);
+    res.send(result)
+  } 
+  catch (error) {
+    res.status(500).send({ error: true, message: 'Internal server error' })
+  }
+
+})
+
 
    
 
