@@ -48,6 +48,7 @@ async function run() {
     const instructorCollection = client.db('summer').collection('instructorCollection');
     const userCollection = client.db('summer').collection('users');
     const cartCollection = client.db('summer').collection('carts');
+    const paymentsCollection = client.db('summer').collection('payments');
 
     // JSON Web Token create API
     app.post('/jwt', (req, res) => {
@@ -223,6 +224,41 @@ async function run() {
       res.status(500).send({ error: 'An error occurred' });
     }
   });
+
+
+  // payment post
+app.post('/payment', async (req, res)=> {
+  const payment = req.body
+  const result = await paymentsCollection.insertOne(payment)
+  // const query = {_id : {$in : payment.itemId.map(id => new ObjectId(id))}}
+  const query = { _id: new ObjectId(payment?.itemId)}
+  const resultTwo = await cartCollection.deleteOne(query)
+  res.send({result,resultTwo})
+})
+
+// enrolled Classes api
+app.get('/payment', verifyJwt, async (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) {
+      return res.send([]);
+    }
+
+    const decodedEmail = req.decoded.email;
+    if (email !== decodedEmail) {
+      return res.status(403).send({ error: true, message: 'Forbidden access' });
+    }
+
+    const query = { email: email };
+    const result = await paymentsCollection.find(query).toArray();
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ error: true, message: 'Internal server error' });
+  }
+});
+
+
+
    
 
 
