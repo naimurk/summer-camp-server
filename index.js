@@ -49,12 +49,13 @@ async function run() {
     const userCollection = client.db('summer').collection('users');
     const cartCollection = client.db('summer').collection('carts');
     const paymentsCollection = client.db('summer').collection('payments');
+    const addClassCollection = client.db('summer').collection('addClass');
 
     // JSON Web Token create API
     app.post('/jwt', (req, res) => {
       try {
         const user = req.body;
-        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '7h' });
         res.send({ token });
       } catch (error) {
         res.status(500).send({ error: true, message: 'Internal server error' });
@@ -192,96 +193,148 @@ async function run() {
       }
     });
 
-  //  Cart delete api 
-  app.delete('/carts/:id', async (req, res) => {
-    const id = req.params.id
-    const query = { _id: new ObjectId(id) }
-    const result = await cartCollection.deleteOne(query)
-    res.send(result)
-  })
+    //  Cart delete api 
+    app.delete('/carts/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await cartCollection.deleteOne(query)
+      res.send(result)
+    })
 
 
-  // stripe  api
-  app.post('/create-payment-intent', verifyJwt, async (req, res) => {
+    // stripe  api
+    app.post('/create-payment-intent', verifyJwt, async (req, res) => {
+      try {
+        const { price } = req.body;
+
+        if (!price) {
+          return res.status(400).send('Price is missing');
+        }
+
+        const amount = Math.round(100 * price); // Convert price to cents
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: 'usd',
+          payment_method_types: ['card']
+        });
+
+        res.send({ clientSecret: paymentIntent.client_secret });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: 'An error occurred' });
+      }
+    });
+
+
+    // payment post
+    app.post('/payment', async (req, res) => {
+      const payment = req.body
+      const result = await paymentsCollection.insertOne(payment)
+      // const query = {_id : {$in : payment.itemId.map(id => new ObjectId(id))}}
+      const query = { _id: new ObjectId(payment?.itemId) }
+      const resultTwo = await cartCollection.deleteOne(query)
+      res.send({ result, resultTwo })
+    })
+
+    // enrolled Classes api
+    app.get('/payment', verifyJwt, async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) {
+          return res.send([]);
+        }
+
+        const decodedEmail = req.decoded.email;
+        if (email !== decodedEmail) {
+          return res.status(403).send({ error: true, message: 'Forbidden access' });
+        }
+
+        const query = { email: email };
+        const result = await paymentsCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' });
+      }
+    });
+
+
+    // available seats update api
+    app.patch('/classes/update/:id', async (req, res) => {
+
+      try {
+        const id = req.params.id;
+        const body = req.body;
+        // console.log(body.available_seats);
+        const filter = { _id: new ObjectId(id) }
+        const updateDoc = {
+          $set: {
+            available_seats: body.available_seats - 1
+          }
+        }
+        const result = await classCollection.updateOne(filter, updateDoc);
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+
+    })
+
+
+    // make admin api
+    app.patch('/makeAdmin/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const updateDoc = {
+          $set: {
+            role: 'admin'
+          }
+        }
+        const result = await userCollection.updateOne(query, updateDoc);
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+
+    })
+
+
+    // make  instructor api
+    app.patch('/makeInstructor/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const updateDoc = {
+          $set: {
+            role: 'instructor'
+          }
+        }
+        const result = await userCollection.updateOne(query, updateDoc);
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+
+    })
+
+    // addClass
+    app.post('/addClass', verifyJwt, async(req, res)=> {
+      const item = req.body
     try {
-      const { price } = req.body;
-  
-      if (!price) {
-        return res.status(400).send('Price is missing');
+      const item = req.body;
+      const result = await addClassCollection.insertOne(item)
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
       }
-  
-      const amount = Math.round(100 * price); // Convert price to cents
-  
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount,
-        currency: 'usd',
-        payment_method_types: ['card']
-      });
-  
-      res.send({ clientSecret: paymentIntent.client_secret });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({ error: 'An error occurred' });
-    }
-  });
-
-
-  // payment post
-app.post('/payment', async (req, res)=> {
-  const payment = req.body
-  const result = await paymentsCollection.insertOne(payment)
-  // const query = {_id : {$in : payment.itemId.map(id => new ObjectId(id))}}
-  const query = { _id: new ObjectId(payment?.itemId)}
-  const resultTwo = await cartCollection.deleteOne(query)
-  res.send({result,resultTwo})
-})
-
-// enrolled Classes api
-app.get('/payment', verifyJwt, async (req, res) => {
-  try {
-    const email = req.query.email;
-    if (!email) {
-      return res.send([]);
-    }
-
-    const decodedEmail = req.decoded.email;
-    if (email !== decodedEmail) {
-      return res.status(403).send({ error: true, message: 'Forbidden access' });
-    }
-
-    const query = { email: email };
-    const result = await paymentsCollection.find(query).toArray();
-    res.send(result);
-  } catch (error) {
-    res.status(500).send({ error: true, message: 'Internal server error' });
-  }
-});
-
-
-// available seats update api
-app.patch('/classes/update/:id', async (req, res) => {
-
-  try {
-    const id = req.params.id;
-    const body = req.body;
-    // console.log(body.available_seats);
-    const filter = { _id: new ObjectId(id) }
-    const updateDoc = {
-      $set: {
-        available_seats: body.available_seats - 1
-      }
-    }
-    const result = await classCollection.updateOne(filter, updateDoc);
-    res.send(result)
-  } 
-  catch (error) {
-    res.status(500).send({ error: true, message: 'Internal server error' })
-  }
-
-})
-
-
+    })
    
+
+
+
 
 
 
