@@ -74,6 +74,19 @@ async function run() {
       }
     });
 
+    // add Class on  ui
+    app.post('/classes', verifyJwt, async(req, res)=> {
+      
+      try {
+        const item = req.body;
+        console.log(item);
+        const result = await classCollection.insertOne(item)
+        res.send(result)
+        } catch (error) {
+          res.status(500).send({ error: true, message: 'Internal server error' })
+        }
+      })
+
 
 
     // Instructors API
@@ -265,7 +278,7 @@ async function run() {
 
     // available seats update api
     app.patch('/classes/update/:id', async (req, res) => {
-
+     
       try {
         const id = req.params.id;
         const body = req.body;
@@ -373,6 +386,47 @@ async function run() {
         res.status(500).send({ error: true, message: 'Internal server error' });
       }
     });
+
+  //  make approved
+    app.patch('/makeApproved/:id', verifyJwt, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const updateDoc = {
+          $set: {
+            status: 'Approved'
+          }
+        }
+        const result = await addClassCollection.updateOne(query, updateDoc);
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+
+    })
+
+
+    // make denied
+    app.patch('/makeDenied/:id', verifyJwt, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const updateDoc = {
+          $set: {
+            status: 'Denied'
+          }
+        }
+        const result = await addClassCollection.updateOne(query, updateDoc);
+        res.send(result)
+      }
+      catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+
+    })
+
+    
    
 
 
