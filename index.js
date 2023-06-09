@@ -62,6 +62,8 @@ async function run() {
       }
     });
 
+
+
     // Classes API
     app.get('/classes', async (req, res) => {
       try {
@@ -71,6 +73,8 @@ async function run() {
         res.status(500).send({ error: true, message: 'Internal server error' });
       }
     });
+
+
 
     // Instructors API
     app.get('/instructors', async (req, res) => {
@@ -323,14 +327,52 @@ async function run() {
 
     // addClass
     app.post('/addClass', verifyJwt, async(req, res)=> {
-      const item = req.body
+      
     try {
       const item = req.body;
       const result = await addClassCollection.insertOne(item)
+      res.send(result)
       } catch (error) {
         res.status(500).send({ error: true, message: 'Internal server error' })
       }
     })
+
+
+
+    // all instructor Classes 
+    app.get('/allClasses', verifyJwt, async(req, res)=> {
+      
+    try {
+      
+      const result = await addClassCollection.find().toArray()
+      res.send(result)
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+    })
+
+    
+
+    // get instructor classes by own email
+    app.get('/myClasses', verifyJwt, async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) {
+          return res.send([]);
+        }
+
+        const decodedEmail = req.decoded.email;
+        if (email !== decodedEmail) {
+          return res.status(403).send({ error: true, message: 'Forbidden access' });
+        }
+
+        const query = { email: email };
+        const result = await addClassCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' });
+      }
+    });
    
 
 
