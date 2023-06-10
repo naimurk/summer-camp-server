@@ -290,7 +290,8 @@ async function run() {
         const updateDoc = {
           $set: {
 
-            available_seats: body?.available_seats - 1
+            available_seats: body?.available_seats - 1,
+            enrolled : body?.enrolled + 1
 
           }
 
@@ -483,7 +484,24 @@ async function run() {
   })
 
 
+ app.patch('/addEnrolled-user/:email', async(req, res)=> {
+ 
+  try {
+    const email = req.params.email;
+    const body = req.body;
+    const query = {email: email}
+    const updateDoc = {
+      $set: {
+            enrolled: body?.enrolled + 1
+          }
+    }
+    const result = await userCollection.updateOne(query, updateDoc)
+    res.send(result)
+  } catch ( error) {
+    res.status(500).send({ error: true, message: 'Internal server error' })
+  }
 
+ })
 
 
 
