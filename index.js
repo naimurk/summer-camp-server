@@ -460,7 +460,27 @@ async function run() {
     })
 
 
+  //  feedback api 
+  app.patch('/feedback/:id', verifyJwt,  async(req, res) => {
+   try {
+    const id = req.params.id;
+    const body  = req?.body;
+    console.log(body);
+    const query = {_id : new ObjectId(id)}
+    const updateDoc = {
+      $set: {
+            feedback: body?.feedback
+          }
+    }
+   
+    const result = await addClassCollection.updateOne(query,updateDoc);
+    res.send(result)
 
+   } catch (error) {
+    res.status(500).send({ error: true, message: 'Internal server error' })
+   }
+
+  })
 
 
 
