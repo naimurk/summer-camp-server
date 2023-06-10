@@ -75,17 +75,17 @@ async function run() {
     });
 
     // add Class on  ui
-    app.post('/classes', verifyJwt, async(req, res)=> {
-      
+    app.post('/classes', verifyJwt, async (req, res) => {
+
       try {
         const item = req.body;
         console.log(item);
         const result = await classCollection.insertOne(item)
         res.send(result)
-        } catch (error) {
-          res.status(500).send({ error: true, message: 'Internal server error' })
-        }
-      })
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+    })
 
 
 
@@ -277,18 +277,25 @@ async function run() {
 
 
     // available seats update api
-    app.patch('/classes/update/:id', async (req, res) => {
-     
+    app.patch('/classes/update/:id', verifyJwt, async (req, res) => {
+
       try {
         const id = req.params.id;
         const body = req.body;
+        // const sum = body?.available_seats;
+        // console.log(sum);
+        // console.log(body);
         // console.log(body.available_seats);
-        const filter = { _id: new ObjectId(id) }
+        const filter = { _id: id }
         const updateDoc = {
           $set: {
-            available_seats: body.available_seats - 1
+
+            available_seats: body?.available_seats - 1
+
           }
+
         }
+        console.log(body?.available_seats)
         const result = await classCollection.updateOne(filter, updateDoc);
         res.send(result)
       }
@@ -339,12 +346,12 @@ async function run() {
     })
 
     // addClass
-    app.post('/addClass', verifyJwt, async(req, res)=> {
-      
-    try {
-      const item = req.body;
-      const result = await addClassCollection.insertOne(item)
-      res.send(result)
+    app.post('/addClass', verifyJwt, async (req, res) => {
+
+      try {
+        const item = req.body;
+        const result = await addClassCollection.insertOne(item)
+        res.send(result)
       } catch (error) {
         res.status(500).send({ error: true, message: 'Internal server error' })
       }
@@ -353,18 +360,18 @@ async function run() {
 
 
     // all instructor Classes 
-    app.get('/allClasses', verifyJwt, async(req, res)=> {
-      
-    try {
-      
-      const result = await addClassCollection.find().toArray()
-      res.send(result)
+    app.get('/allClasses', verifyJwt, async (req, res) => {
+
+      try {
+
+        const result = await addClassCollection.find().toArray()
+        res.send(result)
       } catch (error) {
         res.status(500).send({ error: true, message: 'Internal server error' })
       }
     })
 
-    
+
 
     // get instructor classes by own email
     app.get('/myClasses', verifyJwt, async (req, res) => {
@@ -387,7 +394,33 @@ async function run() {
       }
     });
 
-  //  make approved
+
+    // update total enrolled
+    app.patch('/updateEnrolled/:id', verifyJwt, async (req, res) => {
+      try {
+        const id = req.params.id;
+        console.log(id);
+        const body = req?.body;
+        console.log(body);
+        const query = { _id: new ObjectId(id) }
+        const updateDoc = {
+          $set: {
+
+            enrolled: body?.enrolled + 1,
+            available_seats : body?.available_seats - 1
+          }
+        }
+
+        const result = await addClassCollection.updateOne(query, updateDoc);
+        res.send(result)
+
+
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' })
+      }
+    })
+
+    //  make approved
     app.patch('/makeApproved/:id', verifyJwt, async (req, res) => {
       try {
         const id = req.params.id;
@@ -426,8 +459,8 @@ async function run() {
 
     })
 
-    
-   
+
+
 
 
 
