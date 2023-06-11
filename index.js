@@ -91,9 +91,12 @@ async function run() {
 
     // Instructors API
     app.get('/instructors', async (req, res) => {
+  
       try {
-        const result = await instructorCollection.find().toArray();
+        const query = {role : 'instructor'}
+        const result = await userCollection.find(query).sort({enrolled : -1}).toArray();
         res.send(result);
+
       } catch (error) {
         res.status(500).send({ error: true, message: 'Internal server error' });
       }
@@ -274,6 +277,19 @@ async function run() {
         res.status(500).send({ error: true, message: 'Internal server error' });
       }
     });
+
+    // all payment history by specific email
+    app.get('/payment-history/:email', async(req, res)=> {
+
+      try {
+         const email = req.params?.email;
+         const query = {email: email};
+         const result = await paymentsCollection.find(query).sort({data : -1}).toArray();
+         res.send(result)
+      } catch (error) {
+        res.status(500).send({ error: true, message: 'Internal server error' });
+      }
+    })
 
 
     // available seats update api
